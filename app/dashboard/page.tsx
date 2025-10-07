@@ -27,6 +27,17 @@ export default function Dashboard() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [scrapeProgress, setScrapeProgress] = useState<any>(null);
+
+  const fetchProgress = async () => {
+    try {
+      const response = await fetch('/api/scrape/progress');
+      const data = await response.json();
+      setScrapeProgress(data.isScraing ? data : null);
+    } catch (error) {
+      console.error('Error fetching progress:', error);
+    }
+  };
 
   const fetchBusinesses = async () => {
     setLoading(true);
@@ -69,11 +80,17 @@ export default function Dashboard() {
   useEffect(() => {
     const interval = setInterval(() => {
       fetchBusinesses();
+      fetchProgress(); // Also check scraping progress
     }, 10000); // Refresh every 10 seconds
 
     return () => clearInterval(interval); // Cleanup on unmount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, leadScoreFilter, hasWebsiteFilter, contactedFilter, sortField, sortDirection]);
+
+  // Check progress on initial load
+  useEffect(() => {
+    fetchProgress();
+  }, []);
 
   const handleContactToggle = async (id: string, contacted: boolean) => {
     try {
@@ -172,6 +189,53 @@ export default function Dashboard() {
           <span>Auto-refreshing every 10s</span>
         </div>
       </div>
+
+      {/* Scraping Progress Bar */}
+      {scrapeProgress && scrapeProgress.isScraing && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="text-lg font-semibold text-blue-900">
+                🔍 Scraping in Progress
+              </h3>
+              <p className="text-sm text-blue-700">
+                {scrapeProgress.location && scrapeProgress.businessType && (
+                  <>Searching for {scrapeProgress.businessType} in {scrapeProgress.location}</>
+                )}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-bold text-blue-900">
+                {scrapeProgress.current}/{scrapeProgress.total}
+              </p>
+              <p className="text-xs text-blue-600">businesses scraped</p>
+            </div>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="relative w-full bg-blue-200 rounded-full h-3 mb-3">
+            <div
+              className="absolute top-0 left-0 bg-blue-600 h-3 rounded-full transition-all duration-500"
+              style={{
+                width: `${(scrapeProgress.current / scrapeProgress.total) * 100}%`,
+              }}
+            ></div>
+          </div>
+
+          <div className="flex justify-between text-sm">
+            <p className="text-blue-700">
+              {scrapeProgress.currentBusiness && (
+                <>Currently scraping: <span className="font-semibold">{scrapeProgress.currentBusiness}</span></>
+              )}
+            </p>
+            <p className="text-blue-600">
+              {scrapeProgress.estimatedTimeRemaining && (
+                <>~{scrapeProgress.estimatedTimeRemaining}s remaining</>
+              )}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Filters and Actions */}
       <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">

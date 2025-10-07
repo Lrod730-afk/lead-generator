@@ -63,9 +63,19 @@ function parseAddress(addressString) {
   return { address, city, state, zip };
 }
 
+// Report progress to Vercel API
+async function reportProgress(data) {
+  try {
+    await axios.post(`${API_ENDPOINT.replace('/businesses/import', '/scrape/progress')}`, data);
+  } catch (error) {
+    console.error('Failed to report progress:', error.message);
+  }
+}
+
 // Main scraping function
 async function scrapeGoogleMaps(location, businessType) {
   console.log(`🔍 Starting search for ${businessType} in ${location}...`);
+  const startTime = Date.now();
 
   const launchOptions = {
     headless: 'new',
@@ -139,6 +149,16 @@ async function scrapeGoogleMaps(location, businessType) {
     });
 
     console.log(`Found ${businessLinks.length} businesses to check`);
+
+    // Report initial progress
+    await reportProgress({
+      isScraing: true,
+      location,
+      businessType,
+      total: businessLinks.length,
+      current: 0,
+      startTime
+    });
 
     const businesses = [];
 
@@ -285,6 +305,17 @@ async function scrapeGoogleMaps(location, businessType) {
           console.error(`   ❌ Failed to send to dashboard:`, apiError.message);
         }
 
+        // Report progress update
+        await reportProgress({
+          isScraing: true,
+          location,
+          businessType,
+          total: businessLinks.length,
+          current: i + 1,
+          currentBusiness: businessData.name,
+          startTime
+        });
+
         await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 2000));
 
       } catch (err) {
@@ -293,11 +324,27 @@ async function scrapeGoogleMaps(location, businessType) {
     }
 
     await browser.close();
+
+    // Mark scraping as complete
+    await reportProgress({
+      isScraing: false,
+      total: businessLinks.length,
+      current: businessLinks.length
+    });
+
     return businesses;
 
   } catch (error) {
     console.error('❌ Scraping error:', error.message);
     await browser.close();
+
+    // Mark scraping as failed/complete
+    await reportProgress({
+      isScraing: false,
+      total: 0,
+      current: 0
+    });
+
     throw error;
   }
 }

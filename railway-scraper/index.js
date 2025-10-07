@@ -277,6 +277,14 @@ async function scrapeGoogleMaps(location, businessType) {
         console.log(`   📍 ${parsedAddress.city}, ${parsedAddress.state}`);
         console.log(`   🎯 Lead Score: ${leadScore}`);
 
+        // Send to API immediately so it appears in dashboard right away
+        try {
+          await sendToAPI([fullBusinessData]);
+          console.log(`   📤 Sent to dashboard`);
+        } catch (apiError) {
+          console.error(`   ❌ Failed to send to dashboard:`, apiError.message);
+        }
+
         await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 2000));
 
       } catch (err) {
@@ -362,8 +370,9 @@ app.post('/scrape', async (req, res) => {
     const businesses = await scrapeGoogleMaps(location, businessType);
 
     if (businesses.length > 0) {
-      await sendToAPI(businesses);
-      console.log(`\n✅ Successfully scraped and saved ${businesses.length} businesses!`);
+      // No need to send here - already sent individually during scraping
+      console.log(`\n✅ Successfully scraped ${businesses.length} businesses!`);
+      console.log(`📊 All businesses sent to dashboard in real-time`);
     } else {
       console.log('\n❌ No businesses found.');
     }

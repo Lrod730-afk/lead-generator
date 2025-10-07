@@ -129,33 +129,13 @@ export default function Home() {
 
       {/* Search Form */}
       <div className="bg-white rounded-xl shadow-lg p-8 mb-12">
-        {typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? (
-          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-300 rounded-lg">
-            <h3 className="text-lg font-semibold text-yellow-900 mb-2">ℹ️ Scraper Not Available on Deployed Site</h3>
-            <p className="text-sm text-yellow-800 mb-3">
-              The Google Maps scraper cannot run on Vercel due to serverless limitations (Puppeteer, timeouts).
-            </p>
-            <p className="text-sm text-yellow-800 mb-3">
-              <strong>How to add leads:</strong>
-            </p>
-            <ul className="text-sm text-yellow-800 list-disc list-inside space-y-1 ml-4">
-              <li>Run the scraper locally on your computer</li>
-              <li>Use the Import page to upload CSV files</li>
-              <li>Manually add businesses via the API</li>
-            </ul>
-            <p className="text-sm text-yellow-800 mt-3">
-              All features work except live scraping: viewing leads, filtering, exporting, tracking contacts, etc.
-            </p>
-          </div>
-        ) : (
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-800">
-              <strong>How it works:</strong> Enter a location and business type below. The scraper will visit Google Maps,
-              extract real business data (including websites, ratings, contact info), and automatically add them to your dashboard.
-              This process takes 2-5 minutes depending on results found.
-            </p>
-          </div>
-        )}
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-800">
+            <strong>How it works:</strong> Enter a location and business type below. The scraper will visit Google Maps,
+            extract real business data (including websites, ratings, contact info), and automatically add them to your dashboard.
+            This process takes 2-5 minutes depending on results found.
+          </p>
+        </div>
         <form onSubmit={handleSearch} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Location */}
@@ -228,7 +208,7 @@ export default function Home() {
 
           <button
             type="submit"
-            disabled={isScraing || (typeof window !== 'undefined' && window.location.hostname !== 'localhost')}
+            disabled={isScraing}
             className="w-full bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition duration-200 flex items-center justify-center space-x-2"
           >
             {isScraing ? (

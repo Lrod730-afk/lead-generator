@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { location, businessType, radius } = await request.json();
+    const { location, businessType, radius, maxResults, scrapeSpeed } = await request.json();
 
     if (!location || !businessType) {
       return NextResponse.json(
@@ -66,6 +66,8 @@ export async function POST(request: NextRequest) {
         location,
         businessType,
         radius: radius || 10,
+        maxResults: maxResults || 10,
+        scrapeSpeed: scrapeSpeed || 'normal',
       }),
     });
 

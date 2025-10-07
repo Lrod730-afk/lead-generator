@@ -73,9 +73,18 @@ async function reportProgress(data) {
 }
 
 // Main scraping function
-async function scrapeGoogleMaps(location, businessType) {
+async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeSpeed = 'normal') {
   console.log(`🔍 Starting search for ${businessType} in ${location}...`);
+  console.log(`📊 Max results: ${maxResults}, Speed: ${scrapeSpeed}`);
   const startTime = Date.now();
+
+  // Calculate delays based on speed
+  const delays = {
+    slow: { initial: 6000, perBusiness: 4000, random: 2000 },
+    normal: { initial: 5000, perBusiness: 3000, random: 2000 },
+    fast: { initial: 2000, perBusiness: 1000, random: 1000 }
+  };
+  const delay = delays[scrapeSpeed] || delays.normal;
 
   const launchOptions = {
     headless: 'new',
@@ -113,7 +122,7 @@ async function scrapeGoogleMaps(location, businessType) {
     console.log(`📍 Navigating to Google Maps...`);
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
 
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    await new Promise(resolve => setTimeout(resolve, delay.initial));
 
     console.log(`📋 Getting business list...`);
 
@@ -145,10 +154,10 @@ async function scrapeGoogleMaps(location, businessType) {
         }
       });
 
-      return links.slice(0, 10);
+      return links.slice(0, maxResults);
     });
 
-    console.log(`Found ${businessLinks.length} businesses to check`);
+    console.log(`Found ${businessLinks.length} businesses to check (requested ${maxResults})`);
 
     // Report initial progress
     await reportProgress({
@@ -316,7 +325,7 @@ async function scrapeGoogleMaps(location, businessType) {
           startTime
         });
 
-        await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 2000));
+        await new Promise(resolve => setTimeout(resolve, delay.perBusiness + Math.random() * delay.random));
 
       } catch (err) {
         console.error(`   ❌ Error getting details for ${bizLink.name}:`, err.message);
@@ -387,7 +396,7 @@ app.get('/', (req, res) => {
 });
 
 app.post('/scrape', async (req, res) => {
-  const { location, businessType, radius } = req.body;
+  const { location, businessType, radius, maxResults, scrapeSpeed } = req.body;
 
   if (!location || !businessType) {
     return res.status(400).json({
@@ -401,6 +410,8 @@ app.post('/scrape', async (req, res) => {
   console.log(`📍 Location: ${location}`);
   console.log(`🏢 Business Type: ${businessType}`);
   console.log(`📏 Radius: ${radius || 10} miles`);
+  console.log(`📊 Max Results: ${maxResults || 10}`);
+  console.log(`⚡ Speed: ${scrapeSpeed || 'normal'}`);
   console.log(`========================================\n`);
 
   // Start scraping (don't wait for it)
@@ -409,12 +420,14 @@ app.post('/scrape', async (req, res) => {
     status: 'processing',
     location,
     businessType,
-    radius: radius || 10
+    radius: radius || 10,
+    maxResults: maxResults || 10,
+    scrapeSpeed: scrapeSpeed || 'normal'
   });
 
   // Run scraper asynchronously
   try {
-    const businesses = await scrapeGoogleMaps(location, businessType);
+    const businesses = await scrapeGoogleMaps(location, businessType, maxResults || 10, scrapeSpeed || 'normal');
 
     if (businesses.length > 0) {
       // No need to send here - already sent individually during scraping

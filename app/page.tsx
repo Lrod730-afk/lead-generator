@@ -10,6 +10,8 @@ export default function Home() {
   const [location, setLocation] = useState('');
   const [businessType, setBusinessType] = useState('');
   const [radius, setRadius] = useState('10');
+  const [maxResults, setMaxResults] = useState('10');
+  const [scrapeSpeed, setScrapeSpeed] = useState('normal');
   const [isScraing, setIsScraing] = useState(false);
   const [scrapeStatus, setScrapeStatus] = useState('');
 
@@ -42,6 +44,8 @@ export default function Home() {
           location,
           businessType,
           radius: parseInt(radius),
+          maxResults: parseInt(maxResults),
+          scrapeSpeed,
         }),
       });
 
@@ -203,6 +207,54 @@ export default function Home() {
                 <option value="25">25 miles</option>
                 <option value="50">50 miles</option>
               </select>
+            </div>
+          </div>
+
+          {/* Advanced Options */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+            {/* Max Results */}
+            <div>
+              <label
+                htmlFor="maxResults"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Number of Businesses
+              </label>
+              <select
+                id="maxResults"
+                value={maxResults}
+                onChange={(e) => setMaxResults(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              >
+                <option value="5">5 businesses</option>
+                <option value="10">10 businesses</option>
+                <option value="20">20 businesses</option>
+                <option value="50">50 businesses</option>
+                <option value="100">100 businesses</option>
+              </select>
+            </div>
+
+            {/* Scrape Speed */}
+            <div>
+              <label
+                htmlFor="scrapeSpeed"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Scraping Speed
+              </label>
+              <select
+                id="scrapeSpeed"
+                value={scrapeSpeed}
+                onChange={(e) => setScrapeSpeed(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              >
+                <option value="slow">Slow (safer, 4-6s/business)</option>
+                <option value="normal">Normal (3-5s/business)</option>
+                <option value="fast">Fast (1-2s/business)</option>
+              </select>
+              <p className="mt-1 text-xs text-gray-500">
+                Faster = higher risk of being blocked by Google
+              </p>
             </div>
           </div>
 

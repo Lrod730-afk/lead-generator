@@ -65,6 +65,16 @@ export default function Dashboard() {
     sortDirection,
   ]);
 
+  // Auto-refresh dashboard every 10 seconds to show new leads in real-time
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchBusinesses();
+    }, 10000); // Refresh every 10 seconds
+
+    return () => clearInterval(interval); // Cleanup on unmount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm, leadScoreFilter, hasWebsiteFilter, contactedFilter, sortField, sortDirection]);
+
   const handleContactToggle = async (id: string, contacted: boolean) => {
     try {
       await fetch(`/api/businesses/${id}`, {
@@ -150,11 +160,17 @@ export default function Dashboard() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Lead Dashboard</h1>
-        <p className="mt-2 text-gray-600">
-          Manage and filter your business leads
-        </p>
+      <div className="mb-8 flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Lead Dashboard</h1>
+          <p className="mt-2 text-gray-600">
+            Manage and filter your business leads
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          <span>Auto-refreshing every 10s</span>
+        </div>
       </div>
 
       {/* Filters and Actions */}

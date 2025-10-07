@@ -103,7 +103,7 @@ async function scrapeGoogleMaps(location, businessType) {
     console.log(`📍 Navigating to Google Maps...`);
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
 
-    await page.waitForTimeout(5000);
+    await new Promise(resolve => setTimeout(resolve, 5000));
 
     console.log(`📋 Getting business list...`);
 
@@ -154,7 +154,7 @@ async function scrapeGoogleMaps(location, businessType) {
           timeout: 30000
         });
 
-        await page.waitForTimeout(3000);
+        await new Promise(resolve => setTimeout(resolve, 3000));
 
         const businessData = await page.evaluate(() => {
           const name = document.querySelector('h1')?.textContent ||
@@ -277,7 +277,7 @@ async function scrapeGoogleMaps(location, businessType) {
         console.log(`   📍 ${parsedAddress.city}, ${parsedAddress.state}`);
         console.log(`   🎯 Lead Score: ${leadScore}`);
 
-        await page.waitForTimeout(2000 + Math.random() * 2000);
+        await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 2000));
 
       } catch (err) {
         console.error(`   ❌ Error getting details for ${bizLink.name}:`, err.message);

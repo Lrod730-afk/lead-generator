@@ -90,11 +90,11 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
   console.log(`📊 Max results: ${maxResults}, Speed: ${scrapeSpeed}`);
   const startTime = Date.now();
 
-  // Calculate delays based on speed - ultra optimized with no random delays
+  // Calculate delays based on speed - extreme optimization
   const delays = {
-    slow: { initial: 1000, perBusiness: 600 },
-    normal: { initial: 500, perBusiness: 300 },
-    fast: { initial: 200, perBusiness: 150 }
+    slow: { initial: 800, perBusiness: 400 },
+    normal: { initial: 300, perBusiness: 200 },
+    fast: { initial: 100, perBusiness: 100 }
   };
   const delay = delays[scrapeSpeed] || delays.normal;
 
@@ -132,7 +132,7 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
     const url = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}`;
 
     console.log(`📍 Navigating to Google Maps...`);
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 10000 });
 
     await new Promise(resolve => setTimeout(resolve, delay.initial));
 
@@ -145,7 +145,7 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
     const maxNoNewResults = 5; // Stop after 5 scroll attempts with no new results
 
     while (businessLinks.length < maxResults && noNewResultsCount < maxNoNewResults) {
-      // Ultra-fast aggressive scrolling
+      // Hyper-fast aggressive scrolling
       for (let s = 0; s < 5; s++) {
         await page.evaluate(() => {
           // Try multiple scroll strategies
@@ -166,11 +166,11 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
             panel.scrollBy(0, 1000);
           }
         });
-        await new Promise(resolve => setTimeout(resolve, 150)); // Faster scrolling
+        await new Promise(resolve => setTimeout(resolve, 100)); // Ultra-fast scrolling
       }
 
       // Minimal wait for content to load
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, 150));
 
       // Now check what we have - DON'T slice yet, collect everything
       businessLinks = await page.evaluate(() => {
@@ -250,7 +250,7 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
 
         await page.goto(targetUrl, {
           waitUntil: 'domcontentloaded',
-          timeout: 10000 // Ultra fast timeout
+          timeout: 8000 // Hyper-fast timeout
         });
 
         await new Promise(resolve => setTimeout(resolve, delay.perBusiness));
@@ -263,14 +263,56 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
 
           let rating = 0;
           let reviewCount = 0;
-          const ratingEl = document.querySelector('[jsaction*="pane.rating.moreReviews"]') ||
-                          document.querySelector('[aria-label*="stars"]');
+
+          // Try multiple selectors for rating/reviews
+          const ratingSelectors = [
+            '[jsaction*="pane.rating.moreReviews"]',
+            '[aria-label*="stars"]',
+            '[role="img"][aria-label*="stars"]',
+            'span[aria-label*="stars"]',
+            'div.F7nice span',
+            '[data-review-id]',
+            '.fontBodyMedium > span[role="img"]'
+          ];
+
+          let ratingEl = null;
+          for (const selector of ratingSelectors) {
+            ratingEl = document.querySelector(selector);
+            if (ratingEl) break;
+          }
+
           if (ratingEl) {
             const text = ratingEl.textContent || ratingEl.getAttribute('aria-label') || '';
             const ratingMatch = text.match(/([0-9.]+)/);
             if (ratingMatch) rating = parseFloat(ratingMatch[1]);
-            const reviewMatch = text.match(/\(([0-9,]+)\)/) || text.match(/([0-9,]+)\s*review/);
+            const reviewMatch = text.match(/\(([0-9,]+)\)/) || text.match(/([0-9,]+)\s*review/i);
             if (reviewMatch) reviewCount = parseInt(reviewMatch[1].replace(/,/g, ''));
+          }
+
+          // Additional fallback: look for review count in button text
+          if (reviewCount === 0) {
+            const reviewButtons = document.querySelectorAll('button');
+            for (const btn of reviewButtons) {
+              const btnText = btn.textContent || '';
+              const match = btnText.match(/([0-9,]+)\s*review/i);
+              if (match) {
+                reviewCount = parseInt(match[1].replace(/,/g, ''));
+                break;
+              }
+            }
+          }
+
+          // Look for reviews in aria-label attributes
+          if (reviewCount === 0) {
+            const allElements = document.querySelectorAll('[aria-label]');
+            for (const el of allElements) {
+              const label = el.getAttribute('aria-label') || '';
+              const match = label.match(/([0-9,]+)\s*review/i);
+              if (match) {
+                reviewCount = parseInt(match[1].replace(/,/g, ''));
+                break;
+              }
+            }
           }
 
           let phone = '';

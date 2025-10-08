@@ -72,6 +72,18 @@ async function reportProgress(data) {
   }
 }
 
+// Check if business already exists in database
+async function checkBusinessExists(name, phone) {
+  try {
+    const checkUrl = API_ENDPOINT.replace('/businesses/import', '/businesses/check');
+    const response = await axios.post(checkUrl, { name, phone });
+    return response.data.exists;
+  } catch (error) {
+    console.error('Failed to check business exists:', error.message);
+    return false; // If check fails, proceed with scraping
+  }
+}
+
 // Main scraping function
 async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeSpeed = 'normal') {
   console.log(`🔍 Starting search for ${businessType} in ${location}...`);
@@ -124,38 +136,58 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
 
     await new Promise(resolve => setTimeout(resolve, delay.initial));
 
-    console.log(`📋 Getting business list...`);
+    console.log(`📋 Getting business list (need ${maxResults})...`);
 
-    const businessLinks = await page.evaluate((max) => {
-      const links = [];
-      const items = document.querySelectorAll('a[href*="/maps/place/"]');
+    // Scroll to load more results if needed
+    let businessLinks = [];
+    let scrollAttempts = 0;
+    const maxScrollAttempts = Math.ceil(maxResults / 5); // Roughly 5 results load per scroll
 
-      items.forEach(item => {
-        const href = item.getAttribute('href');
-        if (href && href.includes('/maps/place/')) {
-          const name = item.getAttribute('aria-label') ||
-                      item.querySelector('div[class*="fontHeadlineSmall"]')?.textContent ||
-                      item.textContent;
+    while (businessLinks.length < maxResults && scrollAttempts < maxScrollAttempts) {
+      businessLinks = await page.evaluate((max) => {
+        const links = [];
+        const items = document.querySelectorAll('a[href*="/maps/place/"]');
 
-          let cleanHref = href;
-          if (href.startsWith('http')) {
-            const url = new URL(href);
-            cleanHref = url.pathname + url.search;
-          } else if (!href.startsWith('/')) {
-            cleanHref = '/' + href;
+        items.forEach(item => {
+          const href = item.getAttribute('href');
+          if (href && href.includes('/maps/place/')) {
+            const name = item.getAttribute('aria-label') ||
+                        item.querySelector('div[class*="fontHeadlineSmall"]')?.textContent ||
+                        item.textContent;
+
+            let cleanHref = href;
+            if (href.startsWith('http')) {
+              const url = new URL(href);
+              cleanHref = url.pathname + url.search;
+            } else if (!href.startsWith('/')) {
+              cleanHref = '/' + href;
+            }
+
+            if (name && !links.find(l => l.href === cleanHref)) {
+              links.push({
+                name: name.trim(),
+                href: cleanHref
+              });
+            }
           }
+        });
 
-          if (name && !links.find(l => l.href === cleanHref)) {
-            links.push({
-              name: name.trim(),
-              href: cleanHref
-            });
+        return links.slice(0, max);
+      }, maxResults);
+
+      if (businessLinks.length < maxResults) {
+        // Scroll the results panel to load more
+        await page.evaluate(() => {
+          const resultsPanel = document.querySelector('[role="feed"], [role="main"]');
+          if (resultsPanel) {
+            resultsPanel.scrollTop = resultsPanel.scrollHeight;
           }
-        }
-      });
-
-      return links.slice(0, max);
-    }, maxResults);
+        });
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for new results to load
+        scrollAttempts++;
+        console.log(`   Scrolling... found ${businessLinks.length}/${maxResults}`);
+      }
+    }
 
     console.log(`Found ${businessLinks.length} businesses to check (requested ${maxResults})`);
 
@@ -186,6 +218,42 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
         await new Promise(resolve => setTimeout(resolve, 3000));
 
         const businessData = await page.evaluate(() => {
+          const name = document.querySelector('h1')?.textContent ||
+                       document.querySelector('[class*="fontHeadlineLarge"]')?.textContent ||
+                       'Unknown Business';
+
+          let rating = 0;
+          let reviewCount = 0;
+          const ratingEl = document.querySelector('[jsaction*="pane.rating.moreReviews"]') ||
+                          document.querySelector('[aria-label*="stars"]');
+          if (ratingEl) {
+            const text = ratingEl.textContent || ratingEl.getAttribute('aria-label') || '';
+            const ratingMatch = text.match(/([0-9.]+)/);
+            if (ratingMatch) rating = parseFloat(ratingMatch[1]);
+            const reviewMatch = text.match(/\(([0-9,]+)\)/) || text.match(/([0-9,]+)\s*review/);
+            if (reviewMatch) reviewCount = parseInt(reviewMatch[1].replace(/,/g, ''));
+          }
+
+          let phone = '';
+          const phoneEl = document.querySelector('[data-tooltip*="Copy phone"], [aria-label*="Phone"], [href^="tel:"]');
+          if (phoneEl) {
+            phone = phoneEl.textContent?.trim() ||
+                   phoneEl.getAttribute('aria-label')?.replace(/[^0-9-().\s]/g, '').trim() ||
+                   phoneEl.getAttribute('href')?.replace('tel:', '') || '';
+          }
+
+          return { name, phone }; // Return early data for duplicate check
+        });
+
+        // Check if business already exists
+        const exists = await checkBusinessExists(businessData.name, businessData.phone);
+        if (exists) {
+          console.log(`   ⏭️  Skipping - already in database`);
+          continue;
+        }
+
+        // Get full business data
+        const fullData = await page.evaluate(() => {
           const name = document.querySelector('h1')?.textContent ||
                        document.querySelector('[class*="fontHeadlineLarge"]')?.textContent ||
                        'Unknown Business';
@@ -253,30 +321,30 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
           };
         });
 
-        const parsedAddress = parseAddress(businessData.address);
+        const parsedAddress = parseAddress(fullData.address);
 
         let leadScore = 'COLD';
         const needsHelp = [];
 
-        if (!businessData.website) {
+        if (!fullData.website) {
           leadScore = 'HOT';
           needsHelp.push('No website');
-        } else if (businessData.website) {
-          if (businessData.website.includes('facebook.com') ||
-              businessData.website.includes('instagram.com')) {
+        } else if (fullData.website) {
+          if (fullData.website.includes('facebook.com') ||
+              fullData.website.includes('instagram.com')) {
             leadScore = 'WARM';
             needsHelp.push('Only social media presence');
           }
         }
 
-        if (businessData.reviewCount < 10) {
+        if (fullData.reviewCount < 10) {
           if (leadScore !== 'HOT') leadScore = 'WARM';
-          needsHelp.push(`Only ${businessData.reviewCount} reviews`);
+          needsHelp.push(`Only ${fullData.reviewCount} reviews`);
         }
 
-        if (businessData.rating && businessData.rating < 4.0 && businessData.rating > 0) {
+        if (fullData.rating && fullData.rating < 4.0 && fullData.rating > 0) {
           leadScore = 'HOT';
-          needsHelp.push(`Low rating: ${businessData.rating}`);
+          needsHelp.push(`Low rating: ${fullData.rating}`);
         }
 
         if (needsHelp.length === 0) {
@@ -284,16 +352,16 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
         }
 
         const fullBusinessData = {
-          name: businessData.name,
-          phone: businessData.phone,
-          website: businessData.website,
+          name: fullData.name,
+          phone: fullData.phone,
+          website: fullData.website,
           address: parsedAddress.address,
           city: parsedAddress.city,
           state: parsedAddress.state,
           zip: parsedAddress.zip,
-          rating: businessData.rating,
-          reviewCount: businessData.reviewCount,
-          industry: businessData.category || businessType,
+          rating: fullData.rating,
+          reviewCount: fullData.reviewCount,
+          industry: fullData.category || businessType,
           leadScore,
           needsHelp,
           source: 'Google Maps',
@@ -302,7 +370,7 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
 
         businesses.push(fullBusinessData);
 
-        console.log(`   ✅ ${businessData.name}`);
+        console.log(`   ✅ ${fullData.name}`);
         console.log(`   📍 ${parsedAddress.city}, ${parsedAddress.state}`);
         console.log(`   🎯 Lead Score: ${leadScore}`);
 
@@ -321,7 +389,7 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
           businessType,
           total: businessLinks.length,
           current: i + 1,
-          currentBusiness: businessData.name,
+          currentBusiness: fullData.name,
           startTime
         });
 

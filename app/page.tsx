@@ -52,13 +52,11 @@ export default function Home() {
       const data = await response.json();
 
       if (response.ok) {
-        setScrapeStatus('Scraping completed! Redirecting to dashboard...');
-        // Refresh stats
-        await fetchStats();
-        // Navigate to dashboard after a short delay
+        setScrapeStatus('Scraping started! Redirecting to progress page...');
+        // Navigate to scraping progress page immediately
         setTimeout(() => {
-          window.location.href = `/dashboard`;
-        }, 2000);
+          window.location.href = `/scraping`;
+        }, 1000);
       } else {
         setScrapeStatus(`Error: ${data.error || 'Failed to scrape businesses'}`);
         setIsScraing(false);

@@ -27,17 +27,6 @@ export default function Dashboard() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [scrapeProgress, setScrapeProgress] = useState<any>(null);
-
-  const fetchProgress = async () => {
-    try {
-      const response = await fetch('/api/scrape/progress');
-      const data = await response.json();
-      setScrapeProgress(data.isScraing ? data : null);
-    } catch (error) {
-      console.error('Error fetching progress:', error);
-    }
-  };
 
   const fetchBusinesses = async () => {
     setLoading(true);
@@ -76,21 +65,15 @@ export default function Dashboard() {
     sortDirection,
   ]);
 
-  // Auto-refresh dashboard every 1 second to show new leads instantly
+  // Auto-refresh dashboard every 10 seconds to show new leads
   useEffect(() => {
     const interval = setInterval(() => {
       fetchBusinesses();
-      fetchProgress(); // Also check scraping progress
-    }, 1000); // Refresh every 1 second for instant updates
+    }, 10000); // Refresh every 10 seconds
 
     return () => clearInterval(interval); // Cleanup on unmount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, leadScoreFilter, hasWebsiteFilter, contactedFilter, sortField, sortDirection]);
-
-  // Check progress on initial load
-  useEffect(() => {
-    fetchProgress();
-  }, []);
 
   const handleContactToggle = async (id: string, contacted: boolean) => {
     try {
@@ -190,55 +173,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Scraping Progress Bar */}
-      {scrapeProgress && scrapeProgress.isScraing && (
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-2xl p-8 mb-8 shadow-lg">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-xl font-bold text-blue-900 flex items-center gap-3">
-                <div className="animate-pulse bg-blue-500 rounded-full p-2 text-white">
-                  🔍
-                </div>
-                Scraping in Progress
-              </h3>
-              <p className="text-sm text-blue-700 mt-1 font-medium">
-                {scrapeProgress.location && scrapeProgress.businessType && (
-                  <>Searching for <span className="font-bold">{scrapeProgress.businessType}</span> in <span className="font-bold">{scrapeProgress.location}</span></>
-                )}
-              </p>
-            </div>
-            <div className="text-right bg-white rounded-xl p-4 shadow-md">
-              <p className="text-3xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                {scrapeProgress.current}/{scrapeProgress.total}
-              </p>
-              <p className="text-xs text-blue-600 font-semibold">businesses scraped</p>
-            </div>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="relative w-full bg-blue-200 rounded-full h-4 mb-4 overflow-hidden shadow-inner">
-            <div
-              className="absolute top-0 left-0 bg-gradient-to-r from-blue-500 to-purple-600 h-4 rounded-full transition-all duration-500 shadow-md"
-              style={{
-                width: `${(scrapeProgress.current / scrapeProgress.total) * 100}%`,
-              }}
-            ></div>
-          </div>
-
-          <div className="flex justify-between text-sm">
-            <p className="text-blue-800 font-medium">
-              {scrapeProgress.currentBusiness && (
-                <>🎯 Currently: <span className="font-bold">{scrapeProgress.currentBusiness}</span></>
-              )}
-            </p>
-            <p className="text-purple-700 font-semibold">
-              {scrapeProgress.estimatedTimeRemaining && (
-                <>⏱️ ~{scrapeProgress.estimatedTimeRemaining}s remaining</>
-              )}
-            </p>
-          </div>
-        </div>
-      )}
+      {/* Progress bar removed - now shown on /scraping page */}
 
       {/* Filters and Actions */}
       <div className="bg-white/80 backdrop-blur-sm rounded-2xl border-2 border-gray-100 p-8 mb-8 shadow-lg">

@@ -90,57 +90,69 @@ export default function Home() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      {/* Hero Section */}
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
-          Find Your Perfect Leads
-        </h1>
-        <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-          Scrape real businesses from Google Maps and discover which ones need your digital marketing, website
-          development, and AI automation services.
-        </p>
-      </div>
-
-      {/* Stats */}
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-          <StatsCard
-            title="Total Leads"
-            value={stats.totalLeads}
-            icon={Database}
-            color="blue"
-          />
-          <StatsCard
-            title="Hot Leads"
-            value={stats.hotLeads}
-            icon={TrendingUp}
-            color="red"
-          />
-          <StatsCard
-            title="Warm Leads"
-            value={stats.warmLeads}
-            icon={Target}
-            color="yellow"
-          />
-          <StatsCard
-            title="Cold Leads"
-            value={stats.coldLeads}
-            icon={Users}
-            color="green"
-          />
-        </div>
-      )}
-
-      {/* Search Form */}
-      <div className="bg-white rounded-xl shadow-lg p-8 mb-12">
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-blue-800">
-            <strong>How it works:</strong> Enter a location and business type below. The scraper will visit Google Maps,
-            extract real business data (including websites, ratings, contact info), and automatically add them to your dashboard.
-            This process takes 2-5 minutes depending on results found.
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Hero Section */}
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center px-4 py-2 bg-blue-100 rounded-full mb-6">
+            <span className="text-blue-800 font-semibold text-sm">✨ AI-Powered Lead Generation</span>
+          </div>
+          <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 mb-6 leading-tight">
+            Find Your Perfect <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Leads</span>
+          </h1>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+            Discover high-quality business leads from Google Maps instantly. Identify businesses that need your
+            <span className="font-semibold text-gray-800"> digital marketing</span>,
+            <span className="font-semibold text-gray-800"> web development</span>, and
+            <span className="font-semibold text-gray-800"> AI automation</span> services.
           </p>
         </div>
+
+        {/* Stats */}
+        {stats && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-16">
+            <StatsCard
+              title="Total Leads"
+              value={stats.totalLeads}
+              icon={Database}
+              color="blue"
+            />
+            <StatsCard
+              title="Hot Leads"
+              value={stats.hotLeads}
+              icon={TrendingUp}
+              color="red"
+            />
+            <StatsCard
+              title="Warm Leads"
+              value={stats.warmLeads}
+              icon={Target}
+              color="yellow"
+            />
+            <StatsCard
+              title="Cold Leads"
+              value={stats.coldLeads}
+              icon={Users}
+              color="green"
+            />
+          </div>
+        )}
+
+        {/* Search Form */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-100 p-10 mb-12">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl">
+              <Search className="w-6 h-6 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900">Generate Leads</h2>
+          </div>
+
+          <div className="mb-8 p-5 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-100 rounded-xl">
+            <p className="text-sm text-gray-700 leading-relaxed">
+              <strong className="text-blue-800">💡 How it works:</strong> Enter a location and business type below. Our AI-powered scraper will visit Google Maps,
+              extract real business data (websites, ratings, contact info), and add them to your dashboard with intelligent lead scoring.
+            </p>
+          </div>
         <form onSubmit={handleSearch} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Location */}
@@ -249,9 +261,9 @@ export default function Home() {
                 onChange={(e) => setScrapeSpeed(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               >
-                <option value="slow">Slow (safer, 4-6s/business)</option>
-                <option value="normal">Normal (3-5s/business)</option>
-                <option value="fast">Fast (1-2s/business)</option>
+                <option value="slow">🐢 Slow (safer, ~2s/business)</option>
+                <option value="normal">⚡ Normal (~1s/business)</option>
+                <option value="fast">🚀 Fast (~0.5s/business)</option>
               </select>
               <p className="mt-1 text-xs text-gray-500">
                 Faster = higher risk of being blocked by Google
@@ -262,29 +274,29 @@ export default function Home() {
           <button
             type="submit"
             disabled={isScraing}
-            className="w-full bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition duration-200 flex items-center justify-center space-x-2"
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 flex items-center justify-center space-x-3 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
           >
             {isScraing ? (
               <>
-                <div className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-solid border-white border-r-transparent"></div>
-                <span>Scraping Google Maps...</span>
+                <div className="inline-block h-6 w-6 animate-spin rounded-full border-3 border-solid border-white border-r-transparent"></div>
+                <span className="text-lg">Scraping Google Maps...</span>
               </>
             ) : (
               <>
-                <Search className="h-5 w-5" />
-                <span>Scrape Real Businesses</span>
+                <Search className="h-6 w-6" />
+                <span className="text-lg">🚀 Generate Leads Now</span>
               </>
             )}
           </button>
 
           {scrapeStatus && (
             <div
-              className={`mt-4 p-4 rounded-lg ${
+              className={`mt-6 p-5 rounded-xl border-2 font-medium ${
                 scrapeStatus.startsWith('Error')
-                  ? 'bg-red-100 text-red-800'
+                  ? 'bg-red-50 text-red-800 border-red-200'
                   : scrapeStatus.includes('completed')
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-blue-100 text-blue-800'
+                  ? 'bg-green-50 text-green-800 border-green-200'
+                  : 'bg-blue-50 text-blue-800 border-blue-200'
               }`}
             >
               {scrapeStatus}
@@ -293,45 +305,46 @@ export default function Home() {
         </form>
       </div>
 
-      {/* Features */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div className="text-center">
-          <div className="bg-red-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-            <TrendingUp className="h-8 w-8 text-red-600" />
+        {/* Features */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+          <div className="text-center p-6 bg-white/60 backdrop-blur rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="bg-gradient-to-br from-red-400 to-pink-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <TrendingUp className="h-8 w-8 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">
+              🔥 Hot Leads
+            </h3>
+            <p className="text-gray-600 leading-relaxed">
+              Businesses with no website, low reviews, or poor online presence.
+              Perfect opportunities for your services.
+            </p>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Hot Leads
-          </h3>
-          <p className="text-gray-600">
-            Businesses with no website, low reviews, or poor online presence.
-            Perfect opportunities for your services.
-          </p>
-        </div>
 
-        <div className="text-center">
-          <div className="bg-yellow-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Target className="h-8 w-8 text-yellow-600" />
+          <div className="text-center p-6 bg-white/60 backdrop-blur rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="bg-gradient-to-br from-yellow-400 to-orange-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <Target className="h-8 w-8 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">
+              🎯 Smart Scoring
+            </h3>
+            <p className="text-gray-600 leading-relaxed">
+              Automatically identifies businesses that need website development,
+              review management, or digital marketing.
+            </p>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Smart Scoring
-          </h3>
-          <p className="text-gray-600">
-            Automatically identifies businesses that need website development,
-            review management, or digital marketing.
-          </p>
-        </div>
 
-        <div className="text-center">
-          <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Database className="h-8 w-8 text-green-600" />
+          <div className="text-center p-6 bg-white/60 backdrop-blur rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="bg-gradient-to-br from-green-400 to-emerald-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <Database className="h-8 w-8 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">
+              📊 Easy Export
+            </h3>
+            <p className="text-gray-600 leading-relaxed">
+              Export leads to CSV, copy contact information, and track which
+              businesses you&apos;ve contacted.
+            </p>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Easy Export
-          </h3>
-          <p className="text-gray-600">
-            Export leads to CSV, copy contact information, and track which
-            businesses you&apos;ve contacted.
-          </p>
         </div>
       </div>
     </div>

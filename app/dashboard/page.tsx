@@ -192,30 +192,33 @@ export default function Dashboard() {
 
       {/* Scraping Progress Bar */}
       {scrapeProgress && scrapeProgress.isScraing && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-          <div className="flex items-center justify-between mb-3">
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-2xl p-8 mb-8 shadow-lg">
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-lg font-semibold text-blue-900">
-                🔍 Scraping in Progress
+              <h3 className="text-xl font-bold text-blue-900 flex items-center gap-3">
+                <div className="animate-pulse bg-blue-500 rounded-full p-2 text-white">
+                  🔍
+                </div>
+                Scraping in Progress
               </h3>
-              <p className="text-sm text-blue-700">
+              <p className="text-sm text-blue-700 mt-1 font-medium">
                 {scrapeProgress.location && scrapeProgress.businessType && (
-                  <>Searching for {scrapeProgress.businessType} in {scrapeProgress.location}</>
+                  <>Searching for <span className="font-bold">{scrapeProgress.businessType}</span> in <span className="font-bold">{scrapeProgress.location}</span></>
                 )}
               </p>
             </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-blue-900">
+            <div className="text-right bg-white rounded-xl p-4 shadow-md">
+              <p className="text-3xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 {scrapeProgress.current}/{scrapeProgress.total}
               </p>
-              <p className="text-xs text-blue-600">businesses scraped</p>
+              <p className="text-xs text-blue-600 font-semibold">businesses scraped</p>
             </div>
           </div>
 
           {/* Progress Bar */}
-          <div className="relative w-full bg-blue-200 rounded-full h-3 mb-3">
+          <div className="relative w-full bg-blue-200 rounded-full h-4 mb-4 overflow-hidden shadow-inner">
             <div
-              className="absolute top-0 left-0 bg-blue-600 h-3 rounded-full transition-all duration-500"
+              className="absolute top-0 left-0 bg-gradient-to-r from-blue-500 to-purple-600 h-4 rounded-full transition-all duration-500 shadow-md"
               style={{
                 width: `${(scrapeProgress.current / scrapeProgress.total) * 100}%`,
               }}
@@ -223,14 +226,14 @@ export default function Dashboard() {
           </div>
 
           <div className="flex justify-between text-sm">
-            <p className="text-blue-700">
+            <p className="text-blue-800 font-medium">
               {scrapeProgress.currentBusiness && (
-                <>Currently scraping: <span className="font-semibold">{scrapeProgress.currentBusiness}</span></>
+                <>🎯 Currently: <span className="font-bold">{scrapeProgress.currentBusiness}</span></>
               )}
             </p>
-            <p className="text-blue-600">
+            <p className="text-purple-700 font-semibold">
               {scrapeProgress.estimatedTimeRemaining && (
-                <>~{scrapeProgress.estimatedTimeRemaining}s remaining</>
+                <>⏱️ ~{scrapeProgress.estimatedTimeRemaining}s remaining</>
               )}
             </p>
           </div>
@@ -238,7 +241,7 @@ export default function Dashboard() {
       )}
 
       {/* Filters and Actions */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl border-2 border-gray-100 p-8 mb-8 shadow-lg">
         {/* Search */}
         <div className="mb-6">
           <div className="relative">
@@ -257,25 +260,25 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           {/* Lead Score Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Lead Score
+            <label className="block text-sm font-bold text-gray-800 mb-3">
+              🎯 Lead Score
             </label>
             <div className="flex space-x-2">
               {(['HOT', 'WARM', 'COLD'] as LeadScore[]).map((score) => (
                 <button
                   key={score}
                   onClick={() => toggleLeadScore(score)}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 ${
                     leadScoreFilter.includes(score)
                       ? score === 'HOT'
-                        ? 'bg-red-200 text-red-800'
+                        ? 'bg-gradient-to-br from-red-400 to-pink-500 text-white'
                         : score === 'WARM'
-                        ? 'bg-yellow-200 text-yellow-800'
-                        : 'bg-green-200 text-green-800'
+                        ? 'bg-gradient-to-br from-yellow-400 to-orange-500 text-white'
+                        : 'bg-gradient-to-br from-green-400 to-emerald-500 text-white'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
-                  {score}
+                  {score === 'HOT' ? '🔥' : score === 'WARM' ? '⚡' : '❄️'} {score}
                 </button>
               ))}
             </div>

@@ -90,11 +90,11 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
   console.log(`📊 Max results: ${maxResults}, Speed: ${scrapeSpeed}`);
   const startTime = Date.now();
 
-  // Calculate delays based on speed
+  // Calculate delays based on speed - optimized for faster scraping
   const delays = {
-    slow: { initial: 6000, perBusiness: 4000, random: 2000 },
-    normal: { initial: 5000, perBusiness: 3000, random: 2000 },
-    fast: { initial: 2000, perBusiness: 1000, random: 1000 }
+    slow: { initial: 2500, perBusiness: 1800, random: 800 },
+    normal: { initial: 1500, perBusiness: 1000, random: 400 },
+    fast: { initial: 800, perBusiness: 500, random: 200 }
   };
   const delay = delays[scrapeSpeed] || delays.normal;
 
@@ -169,8 +169,8 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
         await new Promise(resolve => setTimeout(resolve, 300));
       }
 
-      // Wait a bit longer for content to load
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Wait for content to load (optimized)
+      await new Promise(resolve => setTimeout(resolve, 800));
 
       // Now check what we have - DON'T slice yet, collect everything
       businessLinks = await page.evaluate(() => {
@@ -256,8 +256,8 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
         const targetUrl = bizLink.href.startsWith('http') ? bizLink.href : `https://www.google.com${bizLink.href}`;
 
         await page.goto(targetUrl, {
-          waitUntil: 'networkidle2',
-          timeout: 30000
+          waitUntil: 'domcontentloaded', // Faster than networkidle2
+          timeout: 20000
         });
 
         await new Promise(resolve => setTimeout(resolve, delay.perBusiness));

@@ -142,29 +142,38 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
     let businessLinks = [];
     let previousCount = 0;
     let noNewResultsCount = 0;
-    const maxNoNewResults = 3; // Stop after 3 scrolls with no new results
+    const maxNoNewResults = 5; // Stop after 5 scroll attempts with no new results
 
     while (businessLinks.length < maxResults && noNewResultsCount < maxNoNewResults) {
-      // Scroll multiple times before checking
-      for (let s = 0; s < 3; s++) {
+      // Scroll aggressively - do 5 fast scrolls
+      for (let s = 0; s < 5; s++) {
         await page.evaluate(() => {
+          // Try multiple scroll strategies
           const panels = [
             document.querySelector('[role="feed"]'),
             document.querySelector('[role="main"]'),
             document.querySelector('div[class*="scrollable"]'),
-            document.querySelector('.m6QErb')  // Google Maps results panel class
+            document.querySelector('.m6QErb'),
+            document.querySelector('div[aria-label*="Results"]')
           ];
 
           const panel = panels.find(p => p);
           if (panel) {
+            // Scroll to bottom
             panel.scrollTop = panel.scrollHeight;
+
+            // Also try scrolling by a large amount
+            panel.scrollBy(0, 1000);
           }
         });
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
 
-      // Now check what we have
-      businessLinks = await page.evaluate((max) => {
+      // Wait a bit longer for content to load
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Now check what we have - DON'T slice yet, collect everything
+      businessLinks = await page.evaluate(() => {
         const links = [];
         const items = document.querySelectorAll('a[href*="/maps/place/"]');
 
@@ -192,14 +201,16 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
           }
         });
 
-        return links.slice(0, max);
-      }, maxResults);
+        // Return ALL links, we'll slice later
+        return links;
+      });
 
-      console.log(`   Found ${businessLinks.length}/${maxResults} businesses`);
+      console.log(`   Found ${businessLinks.length}/${maxResults} businesses (scrolling...)`);
 
       // Check if we got new results
       if (businessLinks.length === previousCount) {
         noNewResultsCount++;
+        console.log(`   ⚠️  No new results (attempt ${noNewResultsCount}/${maxNoNewResults})`);
       } else {
         noNewResultsCount = 0;
       }
@@ -208,9 +219,13 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
 
       // If we have enough, stop
       if (businessLinks.length >= maxResults) {
+        console.log(`   ✅ Collected enough businesses!`);
         break;
       }
     }
+
+    // Now slice to get exactly what we need
+    businessLinks = businessLinks.slice(0, maxResults);
 
     console.log(`✅ Got ${businessLinks.length} businesses to scrape (requested ${maxResults})`);
 

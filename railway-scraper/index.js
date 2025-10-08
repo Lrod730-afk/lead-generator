@@ -90,11 +90,11 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
   console.log(`📊 Max results: ${maxResults}, Speed: ${scrapeSpeed}`);
   const startTime = Date.now();
 
-  // Calculate delays based on speed - optimized for faster scraping
+  // Calculate delays based on speed - heavily optimized for backend scraping
   const delays = {
-    slow: { initial: 2500, perBusiness: 1800, random: 800 },
-    normal: { initial: 1500, perBusiness: 1000, random: 400 },
-    fast: { initial: 800, perBusiness: 500, random: 200 }
+    slow: { initial: 1500, perBusiness: 800, random: 300 },
+    normal: { initial: 800, perBusiness: 400, random: 200 },
+    fast: { initial: 300, perBusiness: 200, random: 100 }
   };
   const delay = delays[scrapeSpeed] || delays.normal;
 
@@ -169,8 +169,8 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
         await new Promise(resolve => setTimeout(resolve, 300));
       }
 
-      // Wait for content to load (optimized)
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // Wait for content to load (heavily optimized for backend)
+      await new Promise(resolve => setTimeout(resolve, 400));
 
       // Now check what we have - DON'T slice yet, collect everything
       businessLinks = await page.evaluate(() => {
@@ -243,16 +243,9 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
 
     for (let i = 0; i < businessLinks.length; i++) {
       const bizLink = businessLinks[i];
-      console.log(`\n${i + 1}/${businessLinks.length}: Checking ${bizLink.name}...`);
+      console.log(`\n${i + 1}/${businessLinks.length}: Scraping ${bizLink.name}...`);
 
       try {
-        // Quick duplicate check using just the name from the link (before loading page)
-        const quickExists = await checkBusinessExists(bizLink.name, null);
-        if (quickExists) {
-          console.log(`   ⏭️  Skipping - already in database (quick check)`);
-          continue;
-        }
-
         const targetUrl = bizLink.href.startsWith('http') ? bizLink.href : `https://www.google.com${bizLink.href}`;
 
         await page.goto(targetUrl, {
@@ -384,15 +377,7 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
         console.log(`   📍 ${parsedAddress.city}, ${parsedAddress.state}`);
         console.log(`   🎯 Lead Score: ${leadScore}`);
 
-        // Send to API immediately so it appears in dashboard right away
-        try {
-          await sendToAPI([fullBusinessData]);
-          console.log(`   📤 Sent to dashboard`);
-        } catch (apiError) {
-          console.error(`   ❌ Failed to send to dashboard:`, apiError.message);
-        }
-
-        // Report progress update - use maxResults as total
+        // Report progress update - use maxResults as total (NO API CALL to save, just progress)
         await reportProgress({
           isScraing: true,
           location,
@@ -403,6 +388,7 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
           startTime
         });
 
+        // Small delay between page loads
         await new Promise(resolve => setTimeout(resolve, delay.perBusiness + Math.random() * delay.random));
 
       } catch (err) {
@@ -411,6 +397,17 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
     }
 
     await browser.close();
+
+    // Send ALL businesses in one batch at the end (much faster)
+    console.log(`\n📤 Sending ${businesses.length} businesses to database in one batch...`);
+    if (businesses.length > 0) {
+      try {
+        await sendToAPI(businesses);
+        console.log(`✅ Successfully saved ${businesses.length} businesses to database`);
+      } catch (apiError) {
+        console.error(`❌ Failed to save businesses to database:`, apiError.message);
+      }
+    }
 
     // Mark scraping as complete
     await reportProgress({

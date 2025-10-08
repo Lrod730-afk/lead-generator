@@ -77,6 +77,7 @@ export default function Home() {
     'Contractors',
     'Plumbers',
     'Electricians',
+    'Roofing Companies',
     'Hair Salons',
     'Auto Repair',
     'Lawyers',

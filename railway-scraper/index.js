@@ -191,12 +191,12 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
 
     console.log(`Found ${businessLinks.length} businesses to check (requested ${maxResults})`);
 
-    // Report initial progress
+    // Report initial progress - use maxResults as total so progress bar is correct
     await reportProgress({
       isScraing: true,
       location,
       businessType,
-      total: businessLinks.length,
+      total: maxResults,
       current: 0,
       startTime
     });
@@ -382,12 +382,12 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
           console.error(`   ❌ Failed to send to dashboard:`, apiError.message);
         }
 
-        // Report progress update
+        // Report progress update - use maxResults as total
         await reportProgress({
           isScraing: true,
           location,
           businessType,
-          total: businessLinks.length,
+          total: maxResults,
           current: i + 1,
           currentBusiness: fullData.name,
           startTime
@@ -405,8 +405,8 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
     // Mark scraping as complete
     await reportProgress({
       isScraing: false,
-      total: businessLinks.length,
-      current: businessLinks.length
+      total: maxResults,
+      current: maxResults
     });
 
     return businesses;

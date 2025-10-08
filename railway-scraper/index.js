@@ -138,14 +138,33 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
 
     console.log(`📋 Getting business list (need ${maxResults})...`);
 
-    // Scroll to load more results if needed
+    // Aggressively scroll to load all results
     let businessLinks = [];
-    let scrollAttempts = 0;
-    const maxScrollAttempts = Math.ceil(maxResults / 3); // More scrolling attempts
+    let previousCount = 0;
+    let noNewResultsCount = 0;
+    const maxNoNewResults = 3; // Stop after 3 scrolls with no new results
 
-    while (businessLinks.length < maxResults && scrollAttempts < maxScrollAttempts) {
-      // Get all available links (don't slice yet)
-      const allLinks = await page.evaluate(() => {
+    while (businessLinks.length < maxResults && noNewResultsCount < maxNoNewResults) {
+      // Scroll multiple times before checking
+      for (let s = 0; s < 3; s++) {
+        await page.evaluate(() => {
+          const panels = [
+            document.querySelector('[role="feed"]'),
+            document.querySelector('[role="main"]'),
+            document.querySelector('div[class*="scrollable"]'),
+            document.querySelector('.m6QErb')  // Google Maps results panel class
+          ];
+
+          const panel = panels.find(p => p);
+          if (panel) {
+            panel.scrollTop = panel.scrollHeight;
+          }
+        });
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      // Now check what we have
+      businessLinks = await page.evaluate((max) => {
         const links = [];
         const items = document.querySelectorAll('a[href*="/maps/place/"]');
 
@@ -173,30 +192,27 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
           }
         });
 
-        return links;
-      });
+        return links.slice(0, max);
+      }, maxResults);
 
-      const previousCount = businessLinks.length;
-      businessLinks = allLinks.slice(0, maxResults);
+      console.log(`   Found ${businessLinks.length}/${maxResults} businesses`);
 
-      // If we got new results or have enough, stop scrolling
-      if (businessLinks.length >= maxResults || businessLinks.length === previousCount) {
-        break;
+      // Check if we got new results
+      if (businessLinks.length === previousCount) {
+        noNewResultsCount++;
+      } else {
+        noNewResultsCount = 0;
       }
 
-      // Scroll the results panel to load more
-      await page.evaluate(() => {
-        const resultsPanel = document.querySelector('[role="feed"], [role="main"]');
-        if (resultsPanel) {
-          resultsPanel.scrollTop = resultsPanel.scrollHeight;
-        }
-      });
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Wait for new results to load
-      scrollAttempts++;
-      console.log(`   Scrolling... found ${businessLinks.length}/${maxResults}`);
+      previousCount = businessLinks.length;
+
+      // If we have enough, stop
+      if (businessLinks.length >= maxResults) {
+        break;
+      }
     }
 
-    console.log(`Found ${businessLinks.length} businesses to check (requested ${maxResults})`);
+    console.log(`✅ Got ${businessLinks.length} businesses to scrape (requested ${maxResults})`);
 
     // Report initial progress - use maxResults as total so progress bar is correct
     await reportProgress({

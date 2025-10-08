@@ -141,10 +141,11 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
     // Scroll to load more results if needed
     let businessLinks = [];
     let scrollAttempts = 0;
-    const maxScrollAttempts = Math.ceil(maxResults / 5); // Roughly 5 results load per scroll
+    const maxScrollAttempts = Math.ceil(maxResults / 3); // More scrolling attempts
 
     while (businessLinks.length < maxResults && scrollAttempts < maxScrollAttempts) {
-      businessLinks = await page.evaluate((max) => {
+      // Get all available links (don't slice yet)
+      const allLinks = await page.evaluate(() => {
         const links = [];
         const items = document.querySelectorAll('a[href*="/maps/place/"]');
 
@@ -172,21 +173,27 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
           }
         });
 
-        return links.slice(0, max);
-      }, maxResults);
+        return links;
+      });
 
-      if (businessLinks.length < maxResults) {
-        // Scroll the results panel to load more
-        await page.evaluate(() => {
-          const resultsPanel = document.querySelector('[role="feed"], [role="main"]');
-          if (resultsPanel) {
-            resultsPanel.scrollTop = resultsPanel.scrollHeight;
-          }
-        });
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for new results to load
-        scrollAttempts++;
-        console.log(`   Scrolling... found ${businessLinks.length}/${maxResults}`);
+      const previousCount = businessLinks.length;
+      businessLinks = allLinks.slice(0, maxResults);
+
+      // If we got new results or have enough, stop scrolling
+      if (businessLinks.length >= maxResults || businessLinks.length === previousCount) {
+        break;
       }
+
+      // Scroll the results panel to load more
+      await page.evaluate(() => {
+        const resultsPanel = document.querySelector('[role="feed"], [role="main"]');
+        if (resultsPanel) {
+          resultsPanel.scrollTop = resultsPanel.scrollHeight;
+        }
+      });
+      await new Promise(resolve => setTimeout(resolve, 1500)); // Wait for new results to load
+      scrollAttempts++;
+      console.log(`   Scrolling... found ${businessLinks.length}/${maxResults}`);
     }
 
     console.log(`Found ${businessLinks.length} businesses to check (requested ${maxResults})`);
@@ -208,6 +215,13 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
       console.log(`\n${i + 1}/${businessLinks.length}: Checking ${bizLink.name}...`);
 
       try {
+        // Quick duplicate check using just the name from the link (before loading page)
+        const quickExists = await checkBusinessExists(bizLink.name, null);
+        if (quickExists) {
+          console.log(`   ⏭️  Skipping - already in database (quick check)`);
+          continue;
+        }
+
         const targetUrl = bizLink.href.startsWith('http') ? bizLink.href : `https://www.google.com${bizLink.href}`;
 
         await page.goto(targetUrl, {
@@ -215,42 +229,7 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
           timeout: 30000
         });
 
-        await new Promise(resolve => setTimeout(resolve, 3000));
-
-        const businessData = await page.evaluate(() => {
-          const name = document.querySelector('h1')?.textContent ||
-                       document.querySelector('[class*="fontHeadlineLarge"]')?.textContent ||
-                       'Unknown Business';
-
-          let rating = 0;
-          let reviewCount = 0;
-          const ratingEl = document.querySelector('[jsaction*="pane.rating.moreReviews"]') ||
-                          document.querySelector('[aria-label*="stars"]');
-          if (ratingEl) {
-            const text = ratingEl.textContent || ratingEl.getAttribute('aria-label') || '';
-            const ratingMatch = text.match(/([0-9.]+)/);
-            if (ratingMatch) rating = parseFloat(ratingMatch[1]);
-            const reviewMatch = text.match(/\(([0-9,]+)\)/) || text.match(/([0-9,]+)\s*review/);
-            if (reviewMatch) reviewCount = parseInt(reviewMatch[1].replace(/,/g, ''));
-          }
-
-          let phone = '';
-          const phoneEl = document.querySelector('[data-tooltip*="Copy phone"], [aria-label*="Phone"], [href^="tel:"]');
-          if (phoneEl) {
-            phone = phoneEl.textContent?.trim() ||
-                   phoneEl.getAttribute('aria-label')?.replace(/[^0-9-().\s]/g, '').trim() ||
-                   phoneEl.getAttribute('href')?.replace('tel:', '') || '';
-          }
-
-          return { name, phone }; // Return early data for duplicate check
-        });
-
-        // Check if business already exists
-        const exists = await checkBusinessExists(businessData.name, businessData.phone);
-        if (exists) {
-          console.log(`   ⏭️  Skipping - already in database`);
-          continue;
-        }
+        await new Promise(resolve => setTimeout(resolve, delay.perBusiness));
 
         // Get full business data
         const fullData = await page.evaluate(() => {

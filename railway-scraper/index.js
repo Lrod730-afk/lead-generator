@@ -90,11 +90,11 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
   console.log(`📊 Max results: ${maxResults}, Speed: ${scrapeSpeed}`);
   const startTime = Date.now();
 
-  // Calculate delays based on speed - heavily optimized for backend scraping
+  // Calculate delays based on speed - ultra optimized with no random delays
   const delays = {
-    slow: { initial: 1500, perBusiness: 800, random: 300 },
-    normal: { initial: 800, perBusiness: 400, random: 200 },
-    fast: { initial: 300, perBusiness: 200, random: 100 }
+    slow: { initial: 1000, perBusiness: 600 },
+    normal: { initial: 500, perBusiness: 300 },
+    fast: { initial: 200, perBusiness: 150 }
   };
   const delay = delays[scrapeSpeed] || delays.normal;
 
@@ -132,7 +132,7 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
     const url = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}`;
 
     console.log(`📍 Navigating to Google Maps...`);
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
 
     await new Promise(resolve => setTimeout(resolve, delay.initial));
 
@@ -145,7 +145,7 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
     const maxNoNewResults = 5; // Stop after 5 scroll attempts with no new results
 
     while (businessLinks.length < maxResults && noNewResultsCount < maxNoNewResults) {
-      // Scroll aggressively - do 5 fast scrolls
+      // Ultra-fast aggressive scrolling
       for (let s = 0; s < 5; s++) {
         await page.evaluate(() => {
           // Try multiple scroll strategies
@@ -166,11 +166,11 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
             panel.scrollBy(0, 1000);
           }
         });
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise(resolve => setTimeout(resolve, 150)); // Faster scrolling
       }
 
-      // Wait for content to load (heavily optimized for backend)
-      await new Promise(resolve => setTimeout(resolve, 400));
+      // Minimal wait for content to load
+      await new Promise(resolve => setTimeout(resolve, 200));
 
       // Now check what we have - DON'T slice yet, collect everything
       businessLinks = await page.evaluate(() => {
@@ -249,8 +249,8 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
         const targetUrl = bizLink.href.startsWith('http') ? bizLink.href : `https://www.google.com${bizLink.href}`;
 
         await page.goto(targetUrl, {
-          waitUntil: 'domcontentloaded', // Faster than networkidle2
-          timeout: 20000
+          waitUntil: 'domcontentloaded',
+          timeout: 10000 // Ultra fast timeout
         });
 
         await new Promise(resolve => setTimeout(resolve, delay.perBusiness));
@@ -377,7 +377,12 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
         console.log(`   📍 ${parsedAddress.city}, ${parsedAddress.state}`);
         console.log(`   🎯 Lead Score: ${leadScore}`);
 
-        // Report progress update - use maxResults as total (NO API CALL to save, just progress)
+        // Send to API immediately for real-time UI updates (async, don't wait)
+        sendToAPI([fullBusinessData]).catch(err => {
+          console.error(`   ⚠️  UI update failed (will retry in batch):`, err.message);
+        });
+
+        // Report progress update - use maxResults as total
         await reportProgress({
           isScraing: true,
           location,
@@ -388,8 +393,8 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
           startTime
         });
 
-        // Small delay between page loads
-        await new Promise(resolve => setTimeout(resolve, delay.perBusiness + Math.random() * delay.random));
+        // Minimal delay between page loads for speed
+        await new Promise(resolve => setTimeout(resolve, delay.perBusiness));
 
       } catch (err) {
         console.error(`   ❌ Error getting details for ${bizLink.name}:`, err.message);

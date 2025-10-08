@@ -76,12 +76,12 @@ export default function Dashboard() {
     sortDirection,
   ]);
 
-  // Auto-refresh dashboard every 3 seconds to show new leads in real-time
+  // Auto-refresh dashboard every 1 second to show new leads instantly
   useEffect(() => {
     const interval = setInterval(() => {
       fetchBusinesses();
       fetchProgress(); // Also check scraping progress
-    }, 3000); // Refresh every 3 seconds
+    }, 1000); // Refresh every 1 second for instant updates
 
     return () => clearInterval(interval); // Cleanup on unmount
     // eslint-disable-next-line react-hooks/exhaustive-deps

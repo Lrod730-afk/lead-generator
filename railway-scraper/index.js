@@ -126,7 +126,7 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
 
     console.log(`📋 Getting business list...`);
 
-    const businessLinks = await page.evaluate(() => {
+    const businessLinks = await page.evaluate((max) => {
       const links = [];
       const items = document.querySelectorAll('a[href*="/maps/place/"]');
 
@@ -154,8 +154,8 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
         }
       });
 
-      return links.slice(0, maxResults);
-    });
+      return links.slice(0, max);
+    }, maxResults);
 
     console.log(`Found ${businessLinks.length} businesses to check (requested ${maxResults})`);
 

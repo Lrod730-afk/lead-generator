@@ -24,6 +24,16 @@ const PROXY = {
 app.use(cors());
 app.use(express.json());
 
+// Global progress tracking
+let scrapeProgress = {
+  isScraing: false,
+  totalBusinesses: 0,
+  scrapedBusinesses: 0,
+  currentBusiness: '',
+  startTime: null,
+  businesses: []
+};
+
 // Helper function to parse addresses
 function parseAddress(addressString) {
   const states = [
@@ -65,11 +75,15 @@ function parseAddress(addressString) {
 
 // Report progress to Vercel API
 async function reportProgress(data) {
-  try {
-    await axios.post(`${API_ENDPOINT.replace('/businesses/import', '/scrape/progress')}`, data);
-  } catch (error) {
-    console.error('Failed to report progress:', error.message);
-  }
+  // Update global progress state
+  scrapeProgress = {
+    isScraing: data.isScraing,
+    totalBusinesses: data.total,
+    scrapedBusinesses: data.current,
+    currentBusiness: data.currentBusiness || 'Processing...',
+    startTime: data.startTime,
+    businesses: data.businesses || scrapeProgress.businesses || []
+  };
 }
 
 // Check if business already exists in database
@@ -517,6 +531,11 @@ app.get('/', (req, res) => {
   });
 });
 
+// Progress endpoint
+app.get('/progress', (req, res) => {
+  res.json(scrapeProgress);
+});
+
 app.post('/scrape', async (req, res) => {
   const { location, businessType, radius, maxResults, scrapeSpeed } = req.body;
 
@@ -535,6 +554,16 @@ app.post('/scrape', async (req, res) => {
   console.log(`📊 Max Results: ${maxResults || 10}`);
   console.log(`⚡ Speed: ${scrapeSpeed || 'normal'}`);
   console.log(`========================================\n`);
+
+  // Initialize progress state
+  scrapeProgress = {
+    isScraing: true,
+    totalBusinesses: maxResults || 10,
+    scrapedBusinesses: 0,
+    currentBusiness: 'Initializing scraper...',
+    startTime: Date.now(),
+    businesses: []
+  };
 
   // Start scraping (don't wait for it)
   res.status(202).json({
@@ -558,8 +587,14 @@ app.post('/scrape', async (req, res) => {
     } else {
       console.log('\n❌ No businesses found.');
     }
+
+    // Mark scraping as complete
+    scrapeProgress.isScraing = false;
+    scrapeProgress.currentBusiness = 'Complete!';
   } catch (error) {
     console.error('\n❌ Scraping failed:', error.message);
+    scrapeProgress.isScraing = false;
+    scrapeProgress.currentBusiness = 'Error: ' + error.message;
   }
 });
 

@@ -56,7 +56,7 @@ export default function ScrapingPage() {
               ✅ Scraping Complete!
             </h1>
             <p className="text-xl text-gray-600 mb-2">
-              Successfully scraped <span className="font-bold text-green-600">{scrapeProgress?.current || 0}</span> businesses
+              Successfully scraped <span className="font-bold text-green-600">{scrapeProgress?.scrapedBusinesses || 0}</span> businesses
             </p>
             <p className="text-sm text-gray-500">
               Redirecting to dashboard...
@@ -78,10 +78,10 @@ export default function ScrapingPage() {
     );
   }
 
-  const percentage = (scrapeProgress.current / scrapeProgress.total) * 100;
+  const percentage = (scrapeProgress.scrapedBusinesses / scrapeProgress.totalBusinesses) * 100;
   const elapsedTime = scrapeProgress.startTime ? Math.floor((Date.now() - scrapeProgress.startTime) / 1000) : 0;
-  const avgTimePerBusiness = scrapeProgress.current > 0 ? elapsedTime / scrapeProgress.current : 0;
-  const remainingBusinesses = scrapeProgress.total - scrapeProgress.current;
+  const avgTimePerBusiness = scrapeProgress.scrapedBusinesses > 0 ? elapsedTime / scrapeProgress.scrapedBusinesses : 0;
+  const remainingBusinesses = scrapeProgress.totalBusinesses - scrapeProgress.scrapedBusinesses;
   const estimatedSecondsRemaining = Math.ceil(remainingBusinesses * avgTimePerBusiness);
 
   return (
@@ -111,9 +111,9 @@ export default function ScrapingPage() {
             <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-6 text-center border-2 border-blue-100">
               <p className="text-sm text-gray-600 font-semibold mb-2">Businesses Found</p>
               <p className="text-5xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                {scrapeProgress.current}
+                {scrapeProgress.scrapedBusinesses}
               </p>
-              <p className="text-sm text-gray-500 mt-1">of {scrapeProgress.total}</p>
+              <p className="text-sm text-gray-500 mt-1">of {scrapeProgress.totalBusinesses}</p>
             </div>
             <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-6 text-center border-2 border-purple-100">
               <p className="text-sm text-gray-600 font-semibold mb-2">Progress</p>

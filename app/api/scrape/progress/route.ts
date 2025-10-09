@@ -3,61 +3,44 @@ import { getDatabase } from '@/lib/mongodb';
 
 export const dynamic = 'force-dynamic';
 
-// Store progress in memory (for simplicity)
-// In production, you might want to use Redis or similar
-let scrapeProgress: {
-  isScraing: boolean;
-  location?: string;
-  businessType?: string;
-  total: number;
-  current: number;
-  currentBusiness?: string;
-  startTime?: number;
-  estimatedTimeRemaining?: number;
-} = {
-  isScraing: false,
-  total: 0,
-  current: 0,
-};
+const SCRAPER_SERVICE_URL = process.env.SCRAPER_SERVICE_URL || 'http://localhost:3333';
 
 export async function GET() {
-  return NextResponse.json(scrapeProgress);
-}
-
-export async function POST(request: NextRequest) {
   try {
-    const data = await request.json();
+    // Fetch progress from Railway scraper
+    const response = await fetch(`${SCRAPER_SERVICE_URL}/progress`, {
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
-    // Update progress
-    scrapeProgress = {
-      ...scrapeProgress,
-      ...data,
-    };
-
-    // Calculate estimated time remaining if we have the data
-    if (data.current && data.total && data.startTime) {
-      const elapsed = Date.now() - data.startTime;
-      const avgTimePerBusiness = elapsed / data.current;
-      const remaining = data.total - data.current;
-      scrapeProgress.estimatedTimeRemaining = Math.round((avgTimePerBusiness * remaining) / 1000); // in seconds
+    if (!response.ok) {
+      throw new Error(`Failed to fetch progress: ${response.statusText}`);
     }
 
-    return NextResponse.json({ success: true, progress: scrapeProgress });
+    const progress = await response.json();
+
+    // Calculate estimated time remaining if we have the data
+    if (progress.scrapedBusinesses && progress.totalBusinesses && progress.startTime) {
+      const elapsed = Date.now() - progress.startTime;
+      const avgTimePerBusiness = elapsed / progress.scrapedBusinesses;
+      const remaining = progress.totalBusinesses - progress.scrapedBusinesses;
+      progress.estimatedTimeRemaining = Math.round((avgTimePerBusiness * remaining) / 1000); // in seconds
+    }
+
+    return NextResponse.json(progress);
   } catch (error) {
-    console.error('Error updating progress:', error);
-    return NextResponse.json(
-      { error: 'Failed to update progress' },
-      { status: 500 }
-    );
+    console.error('Error fetching progress from Railway:', error);
+    // Return default state if Railway is unreachable
+    return NextResponse.json({
+      isScraing: false,
+      totalBusinesses: 0,
+      scrapedBusinesses: 0,
+      currentBusiness: '',
+      startTime: null,
+      businesses: []
+    });
   }
 }
 
-export async function DELETE() {
-  // Reset progress
-  scrapeProgress = {
-    isScraing: false,
-    total: 0,
-    current: 0,
-  };
-  return NextResponse.json({ success: true });
-}

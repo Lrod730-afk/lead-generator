@@ -1,11 +1,10 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 export default function ScrapingPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [scrapeProgress, setScrapeProgress] = useState<any>(null);
   const [isComplete, setIsComplete] = useState(false);
 

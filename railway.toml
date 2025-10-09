@@ -1,7 +1,9 @@
 [build]
 builder = "NIXPACKS"
+buildCommand = "cd railway-scraper && npm install"
+watchPatterns = ["railway-scraper/**"]
 
 [deploy]
-startCommand = "cd railway-scraper && npm install && node index.js"
+startCommand = "cd railway-scraper && node index.js"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10

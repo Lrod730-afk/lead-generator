@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function ScrapingPage() {
@@ -9,7 +9,7 @@ export default function ScrapingPage() {
   const [scrapeProgress, setScrapeProgress] = useState<any>(null);
   const [isComplete, setIsComplete] = useState(false);
 
-  const fetchProgress = async () => {
+  const fetchProgress = useCallback(async () => {
     try {
       const response = await fetch('/api/scrape/progress');
       const data = await response.json();
@@ -26,7 +26,7 @@ export default function ScrapingPage() {
     } catch (error) {
       console.error('Error fetching progress:', error);
     }
-  };
+  }, [scrapeProgress, router]);
 
   useEffect(() => {
     // Fetch immediately
@@ -38,7 +38,7 @@ export default function ScrapingPage() {
     }, 500);
 
     return () => clearInterval(interval);
-  }, [scrapeProgress]);
+  }, [fetchProgress]);
 
   if (isComplete) {
     return (
@@ -167,7 +167,7 @@ export default function ScrapingPage() {
         {/* Info Card */}
         <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-6 text-center">
           <p className="text-sm text-gray-600">
-            💡 <strong>Tip:</strong> Leads will appear in your dashboard as soon as scraping completes. You'll be automatically redirected.
+            💡 <strong>Tip:</strong> Leads will appear in your dashboard as soon as scraping completes. You&apos;ll be automatically redirected.
           </p>
         </div>
       </div>

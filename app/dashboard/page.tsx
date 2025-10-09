@@ -42,6 +42,7 @@ export default function Dashboard() {
         params.append('contacted', contactedFilter);
       params.append('sortField', sortField);
       params.append('sortDirection', sortDirection);
+      params.append('limit', '100'); // Show up to 100 businesses
 
       const response = await fetch(`/api/businesses?${params.toString()}`);
       const data = await response.json();

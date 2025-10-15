@@ -7,6 +7,37 @@ export default function ScrapingPage() {
   const router = useRouter();
   const [scrapeProgress, setScrapeProgress] = useState<any>(null);
   const [isComplete, setIsComplete] = useState(false);
+  const [isStopping, setIsStopping] = useState(false);
+  const [showStopConfirm, setShowStopConfirm] = useState(false);
+
+  const handleStopScraping = async () => {
+    if (isStopping) return;
+
+    setIsStopping(true);
+    setShowStopConfirm(false);
+
+    try {
+      const response = await fetch('/api/scrape/stop', {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Stopped successfully - wait a moment then redirect
+        setTimeout(() => {
+          router.push('/dashboard');
+        }, 3000);
+      } else {
+        alert('Failed to stop scraper: ' + (data.error || 'Unknown error'));
+        setIsStopping(false);
+      }
+    } catch (error: any) {
+      console.error('Error stopping scraper:', error);
+      alert('Failed to stop scraper: ' + error.message);
+      setIsStopping(false);
+    }
+  };
 
   const fetchProgress = useCallback(async () => {
     try {
@@ -147,7 +178,7 @@ export default function ScrapingPage() {
           </div>
 
           {/* Time Stats */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-4 mb-6">
             <div className="text-center">
               <p className="text-xs text-gray-500 font-semibold mb-1">Elapsed</p>
               <p className="text-lg font-bold text-gray-700">{elapsedTime}s</p>
@@ -161,6 +192,55 @@ export default function ScrapingPage() {
               <p className="text-lg font-bold text-purple-600">~{estimatedSecondsRemaining}s</p>
             </div>
           </div>
+
+          {/* Stop Button */}
+          {!isStopping && !showStopConfirm && (
+            <button
+              onClick={() => setShowStopConfirm(true)}
+              className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105"
+            >
+              🛑 Stop Scraping
+            </button>
+          )}
+
+          {/* Stop Confirmation */}
+          {showStopConfirm && !isStopping && (
+            <div className="bg-red-50 border-2 border-red-200 rounded-xl p-6">
+              <p className="text-center font-bold text-gray-900 mb-4">
+                ⚠️ Stop scraping now?
+              </p>
+              <p className="text-center text-sm text-gray-600 mb-4">
+                {scrapeProgress.scrapedBusinesses} businesses collected so far will be saved.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setShowStopConfirm(false)}
+                  className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 px-4 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleStopScraping}
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg transition-colors"
+                >
+                  Yes, Stop
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Stopping Message */}
+          {isStopping && (
+            <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-6 text-center">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-yellow-600 border-r-transparent mb-3"></div>
+              <p className="font-bold text-gray-900 mb-2">
+                🛑 Stopping scraper...
+              </p>
+              <p className="text-sm text-gray-600">
+                Finishing current business and saving collected data ({scrapeProgress.scrapedBusinesses} leads)
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Info Card */}

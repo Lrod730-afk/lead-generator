@@ -34,6 +34,9 @@ let scrapeProgress = {
   businesses: []
 };
 
+// Global stop flag
+let shouldStopScraping = false;
+
 // Helper function to parse addresses
 function parseAddress(addressString) {
   const states = [
@@ -452,6 +455,12 @@ async function scrapeGoogleMaps(location, businessType, maxResults = 10, scrapeS
         // Minimal delay between page loads for speed
         await new Promise(resolve => setTimeout(resolve, delay.perBusiness));
 
+        // Check if stop was requested
+        if (shouldStopScraping) {
+          console.log('\n⚠️  Stop requested by user - saving collected data...');
+          break;
+        }
+
       } catch (err) {
         console.error(`   ❌ Error getting details for ${bizLink.name}:`, err.message);
       }
@@ -536,6 +545,24 @@ app.get('/progress', (req, res) => {
   res.json(scrapeProgress);
 });
 
+// Stop scraping endpoint
+app.post('/stop', (req, res) => {
+  if (!scrapeProgress.isScraing) {
+    return res.status(400).json({
+      error: 'No scraping in progress'
+    });
+  }
+
+  console.log('\n🛑 Stop request received from UI');
+  shouldStopScraping = true;
+
+  res.json({
+    success: true,
+    message: 'Stop signal sent. Scraper will stop after current business.',
+    businessesCollected: scrapeProgress.scrapedBusinesses
+  });
+});
+
 app.post('/scrape', async (req, res) => {
   const { location, businessType, radius, maxResults, scrapeSpeed } = req.body;
 
@@ -555,7 +582,8 @@ app.post('/scrape', async (req, res) => {
   console.log(`⚡ Speed: ${scrapeSpeed || 'normal'}`);
   console.log(`========================================\n`);
 
-  // Initialize progress state
+  // Reset stop flag and initialize progress state
+  shouldStopScraping = false;
   scrapeProgress = {
     isScraing: true,
     totalBusinesses: maxResults || 10,

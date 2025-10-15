@@ -7,6 +7,61 @@ puppeteer.use(StealthPlugin());
 
 const API_ENDPOINT = process.env.API_ENDPOINT || 'http://localhost:3001/api/businesses/import';
 
+// Global variables for graceful shutdown
+let globalBrowser = null;
+let collectedBusinesses = [];
+let isTerminating = false;
+
+// Graceful shutdown handler
+async function handleTermination() {
+  if (isTerminating) return; // Prevent multiple calls
+  isTerminating = true;
+
+  console.log('\n\n⚠️  TERMINATION SIGNAL RECEIVED (Ctrl+C)');
+  console.log('🛑 Stopping scraper gracefully...');
+
+  // Close browser
+  if (globalBrowser) {
+    console.log('🌐 Closing browser...');
+    try {
+      await globalBrowser.close();
+    } catch (err) {
+      console.log('   Browser already closed');
+    }
+  }
+
+  // Save collected data
+  if (collectedBusinesses.length > 0) {
+    console.log(`\n💾 Saving ${collectedBusinesses.length} collected businesses...`);
+
+    // Try to send to API
+    try {
+      await sendToAPI(collectedBusinesses);
+    } catch (err) {
+      console.log('   API unavailable, saving locally...');
+      const fs = require('fs');
+      const filename = `leads-interrupted-${Date.now()}.json`;
+      fs.writeFileSync(filename, JSON.stringify(collectedBusinesses, null, 2));
+      console.log(`   ✅ Data saved to ${filename}`);
+    }
+
+    console.log('\n📊 PARTIAL RESULTS:');
+    console.log(`Total scraped: ${collectedBusinesses.length}`);
+    console.log(`🔥 HOT leads: ${collectedBusinesses.filter(b => b.leadScore === 'HOT').length}`);
+    console.log(`🌡️  WARM leads: ${collectedBusinesses.filter(b => b.leadScore === 'WARM').length}`);
+    console.log(`❄️  COLD leads: ${collectedBusinesses.filter(b => b.leadScore === 'COLD').length}`);
+  } else {
+    console.log('\n📭 No data collected yet.');
+  }
+
+  console.log('\n👋 Scraper stopped. You can restart anytime!\n');
+  process.exit(0);
+}
+
+// Setup termination handlers
+process.on('SIGINT', handleTermination);  // Ctrl+C
+process.on('SIGTERM', handleTermination); // Kill command
+
 // Proxy configuration - Set USE_PROXY to true and add valid credentials if you have them
 const USE_PROXY = false;
 const PROXY = {
@@ -67,8 +122,10 @@ function parseAddress(addressString) {
   };
 }
 
-async function scrapeGoogleMaps(location, businessType) {
+async function scrapeGoogleMaps(location, businessType, maxResults = 50) {
   console.log(`🔍 Starting search for ${businessType} in ${location}...`);
+  console.log(`🎯 Target: ${maxResults} results`);
+  console.log(`💡 TIP: Press Ctrl+C anytime to stop and save collected data\n`);
 
   const launchOptions = {
     headless: false, // Keep false to watch it work
@@ -84,6 +141,7 @@ async function scrapeGoogleMaps(location, businessType) {
   }
 
   const browser = await puppeteer.launch(launchOptions);
+  globalBrowser = browser; // Store for graceful shutdown
 
   try {
     const page = await browser.newPage();
@@ -107,7 +165,35 @@ async function scrapeGoogleMaps(location, businessType) {
 
     await delay(5000);
 
-    // Get list of businesses first
+    // Scroll to load more results
+    console.log(`📜 Scrolling to load more results...`);
+
+    const scrollableDiv = await page.$('div[role="feed"]');
+    if (scrollableDiv) {
+      let previousHeight = 0;
+      let currentHeight = await page.evaluate(el => el.scrollHeight, scrollableDiv);
+      let scrollAttempts = 0;
+      const maxScrolls = 10; // Scroll up to 10 times to load more results
+
+      while (scrollAttempts < maxScrolls && currentHeight > previousHeight) {
+        previousHeight = currentHeight;
+
+        // Scroll to bottom of the feed
+        await page.evaluate(el => {
+          el.scrollTo(0, el.scrollHeight);
+        }, scrollableDiv);
+
+        console.log(`   Scroll ${scrollAttempts + 1}/${maxScrolls}...`);
+        await delay(2000); // Wait for new results to load
+
+        currentHeight = await page.evaluate(el => el.scrollHeight, scrollableDiv);
+        scrollAttempts++;
+      }
+
+      console.log(`   Loaded results after ${scrollAttempts} scrolls`);
+    }
+
+    // Get list of businesses after scrolling
     console.log(`📋 Getting business list...`);
 
     const businessLinks = await page.evaluate(() => {
@@ -141,7 +227,7 @@ async function scrapeGoogleMaps(location, businessType) {
         }
       });
 
-      return links.slice(0, 10); // Limit to first 10 to avoid taking too long
+      return links.slice(0, maxResults); // Get up to specified number of businesses
     });
 
     console.log(`Found ${businessLinks.length} businesses to check`);
@@ -301,6 +387,7 @@ async function scrapeGoogleMaps(location, businessType) {
         };
 
         businesses.push(fullBusinessData);
+        collectedBusinesses.push(fullBusinessData); // Store for graceful shutdown
 
         console.log(`   ✅ ${businessData.name}`);
         console.log(`   📍 ${parsedAddress.address}, ${parsedAddress.city}, ${parsedAddress.state} ${parsedAddress.zip}`);
@@ -311,6 +398,12 @@ async function scrapeGoogleMaps(location, businessType) {
 
         // Small delay between businesses
         await delay(2000 + Math.random() * 2000);
+
+        // Check if termination was requested
+        if (isTerminating) {
+          console.log('\n⚠️  Stopping as requested...');
+          break;
+        }
 
       } catch (err) {
         console.error(`   ❌ Error getting details for ${bizLink.name}:`, err.message);
@@ -413,19 +506,26 @@ async function sendToAPI(businesses) {
 }
 
 async function main() {
+  // Reset global variables for fresh start
+  collectedBusinesses = [];
+  isTerminating = false;
+  globalBrowser = null;
+
   const args = process.argv.slice(2);
   const location = args[0] || 'Fairfield, CT';
   const businessType = args[1] || 'restaurants';
+  const maxResults = args[2] ? parseInt(args[2]) : 50;
 
   console.log('\n========================================');
   console.log('🚀 LEAD GENERATOR - REAL DATA SCRAPER');
   console.log('========================================');
   console.log(`📍 Location: ${location}`);
   console.log(`🏢 Business Type: ${businessType}`);
+  console.log(`🎯 Max Results: ${maxResults}`);
   console.log('========================================\n');
 
   try {
-    const businesses = await scrapeGoogleMaps(location, businessType);
+    const businesses = await scrapeGoogleMaps(location, businessType, maxResults);
 
     if (businesses.length > 0) {
       console.log('\n========================================');
